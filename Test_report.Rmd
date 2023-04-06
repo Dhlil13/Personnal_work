@@ -1,0 +1,153 @@
+---
+title: "Test_report"
+output: html_notebook
+---
+Importation de la base de données
+
+```{r}
+df = read.csv("C:/Users/Dhalil/Desktop/Cours/Stage/Mag2/Test/data.csv", sep=";", header=T)
+df = as.data.frame(df)
+summary(df)
+
+```
+Transformation de la variable d'intérêt
+
+```{r}
+df$y<-ifelse(df$y == "yes",1,0)
+df$y<- as.factor(df$y)
+table(df$y)
+```
+
+Exploration des variables catégorielles
+
+A: Information client
+```{r}
+library(dbplyr)
+library(ggplot2)
+#Souscription à l'ouverture d'un compte
+summary(df$y)
+dat0 <- data.frame(
+  group = c("yes", "no"),
+  value = c(521, 4000)
+  )
+head(dat0)
+bp<-ggplot(dat0, aes(x="", y=value, fill=group))+
+geom_bar(width = 1, stat = "identity")
+bp
+# Souscription à l'ouverture d'un compte et emploi 
+dat1<- data.frame(table(df$y,df$job))
+names(dat1) <- c("y","job","Count")
+ggplot(dat1, aes(x=job, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within different job')
+
+#Brief Conclusion: Le secteur du management, qui emploie le plus de personnes, compte le plus grand nombre de personnes qui souscrivent à une ouverture de compte. Cependant, en termes de proportion, les techniciens ont la plus forte cote.
+
+# Souscription à l'ouverture d'un compte et statut marital
+dat2<- data.frame(table(df$y,df$marital))
+names(dat2) <- c("y","marital","Count")
+ggplot(dat2, aes(x=marital, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within different marital status')
+
+#Brief Conclusion: Le statut de marrié semble être une clé pour souscrire à l'ouverture d'un compte.
+
+# Souscription à l'ouverture d'un compte et niveau d'éducation
+dat3<- data.frame(table(df$y,df$education))
+names(dat3) <- c("y","education","Count")
+ggplot(dat3, aes(x=education, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within different education')
+
+#Brief Conclusion: Un niveau d'education plus élevé peut se traduire par une plus grande possibilité d'ouverture de compte.
+
+# Souscription à l'ouverture d'un compte et prêt
+dat4<- data.frame(table(df$y,df$loan))
+names(dat4) <- c("y","loan","Count")
+ggplot(dat4, aes(x=loan, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within loan status')
+
+#Brief conclusion: N'avoir aucun prêt personnel en cours est favorable à l'ouverture d'un compte.
+```
+B: Information lié au dernier contact de la campagne en cours
+
+```{r}
+# Souscription à l'ouverture d'un compte et type de communication avec le contact précédent
+dat5<- data.frame(table(df$y,df$contact))
+names(dat5) <- c("y","contact","Count")
+ggplot(dat5, aes(x=contact, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within contact communication')
+
+#Brief conclusion: Avoir eu un contact par cellulaire est favorable à l'ouverture d'un compte.
+```
+
+C: Information liée aux autres attributs
+```{r}
+# Souscription à l'ouverture d'un compte et résultat de la campagne de marketing précédente
+dat6<- data.frame(table(df$y,df$poutcome))
+names(dat6) <- c("y","poutcome","Count")
+ggplot(dat6, aes(x=poutcome, y=Count, fill=y)) + geom_bar(stat="identity", position = 'stack') + 
+  theme_bw()+scale_fill_manual(values = c('green','red'))+theme(axis.text.x = element_text(angle = 45, hjust = 1))+ggtitle('Proportions of subscriber within precedent outcome campagn')
+
+#Brief conclusion: Un résultat de campagne précédente positive est fortement favorable à une ouverture de compte.
+```
+
+Exploration des variables quantitatives
+```{r}
+#Souscription à l'ouverture d'un compte et age
+boxplot(df$age ~ df$y,
+        col = "grey",
+        names = c("0", "1"),
+        ylab = "age",
+        xlab = "y")
+#Balance
+qplot(balance, data=df, geom="histogram")+theme_bw()+ggtitle('Histogram of Balance')
+#Duration
+boxplot(df$duration ~ df$y,
+        col = "grey",
+        names = c("0", "1"),
+        ylab = "duration",
+        xlab = "y")
+#pdays
+boxplot(df$pdays ~ df$y,
+        col = "grey",
+        names = c("0", "1"),
+        ylab = "pdays",
+        xlab = "y")
+
+```
+
+Classification
+
+Méthode de classification: Random Forest
+```{r}
+library(randomForest)
+set.seed(4521)
+rfFit<- randomForest(y~.,data= df)
+print(rfFit)
+```
+Interprêtation:
+On observe à partir de la matrice de confusion (3894+165=4059) individus bien classés soit un taux de bon classement de 89,7%. Le taux de mauvais classement par classe est de 2,6% pour les individus n'ayant pas souscrit à l'ouverture d'un compte et de 68,33% pour les individus ayant souscrit à l'ouverture d'un compte.
+
+Classement des variables explicatives
+On a un modèle qui a 2% d’erreur pour les non souscripteurs et 68% pour les souscripteurs. Voyons, dans ces conditions, quelles sont les variables qui figurent dans notre modèle discriminant le mieux les souscripteurs des non-souscripteurs.
+
+```{r}
+rfFit$importance[order(rfFit$importance[, 1], decreasing = TRUE), ]
+varImpPlot(rfFit)
+
+```
+On observe que les 3 critères qui comptent le plus pour distinguer souscripteurs de non-souscripteurs sont la durée en seconde avec le dernier contact, la balance annuelle moyenne et l'âge.
+
+Prédiction
+
+```{r}
+newdata<-df[,-17]
+Prediction<- predict(rfFit,newdata,type = 'class')
+Prediction
+```
+```{r}
+library(caret)
+rfAcu<-confusionMatrix(Prediction,df$y)
+rfAcu
+```
+Notre modèle de classification permet de prédire le statut de souscription des observations de notre de notre base de données avec une précision de 100%. Ce résultat témoigne du fort pouvoir prédictif de notre modèle mais en référence de la base de données utilisée. Cette précision peut légèrement baisser si la prédiction est appliquée sur une autre base de données comportant les mêmes variables explicatives.
+
+
